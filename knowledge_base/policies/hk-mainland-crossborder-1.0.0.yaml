@@ -1,0 +1,181 @@
+policy_id: hk-mainland-crossborder
+version: "1.0.0"
+effective_date: 2026-01-01
+regions: [cn-mainland, hk]
+description: >-
+  香港居民内地就医理赔场景下的跨境数据订阅合规策略（示意版）。
+  所有名单、阈值均为业务假设值，非法律意见；详见 docs/assumptions.md。
+rules:
+  # ---------- 身份校验 ----------
+  - rule_id: ID-001
+    name: 申请方须为香港侧主体
+    section: identity
+    description: 仅香港侧保险机构连接器可发起跨境数据订阅
+    check: {type: allowlist, path: applicant.region, values: [hk]}
+    outcome_on_fail: deny
+    risk: high
+    reason: 申请方所在区域不在允许范围内
+    clause_ref: clauses/identity.md#CLS-IDENT-001
+    source: 业务假设 B1：仅允许香港侧主体发起订阅
+  - rule_id: ID-002
+    name: 申请方须为已登记保险机构
+    section: identity
+    description: 申请方机构须在香港保险机构登记册（示意）内
+    check: {type: allowlist, path: applicant.organization_id, values: [hk-ins-0001]}
+    outcome_on_fail: deny
+    risk: high
+    reason: 申请方机构未在登记册内，禁止订阅
+    clause_ref: clauses/identity.md#CLS-IDENT-001
+    source: 业务假设 B1：香港保险机构登记册（示意名单）
+  - rule_id: ID-003
+    name: 申请方身份证明材料
+    section: identity
+    description: 订阅申请必须附申请方身份证明材料（必要条件）
+    check: {type: evidence_present, evidence_types: [identity_cert]}
+    missing_outcome: deny
+    evidence_required: [identity_cert]
+    risk: high
+    reason: 缺少申请方身份证明材料，属缺少必要条件，禁止交付
+    clause_ref: clauses/identity.md#CLS-IDENT-001
+    source: 业务假设 B9：身份证明为必要条件
+  # ---------- 用途校验 ----------
+  - rule_id: PUR-001
+    name: 用途限制
+    section: purpose
+    description: 数据仅可用于理赔（claim）与就医报备（medical_report）
+    check: {type: allowlist, path: purpose, values: [claim, medical_report]}
+    outcome_on_fail: deny
+    risk: high
+    reason: 用途不在允许列表内，禁止交付
+    clause_ref: clauses/purpose.md#CLS-PUR-001
+    source: 业务假设 B2：允许用途列表
+  # ---------- 数据最小化 ----------
+  - rule_id: MIN-001
+    name: 数据类型限制
+    section: data_minimization
+    description: 仅允许订阅就诊摘要、费用明细与理赔证明三类数据
+    check:
+      type: subset
+      path: data_types
+      values: [diagnosis_summary, cost_detail, claim_certificate]
+    outcome_on_fail: deny
+    risk: high
+    reason: 请求的数据类型超出允许范围，禁止交付
+    clause_ref: clauses/data-minimization.md#CLS-MIN-001
+    source: 业务假设 B3：允许数据类型
+  - rule_id: MIN-002
+    name: 字段最小化白名单
+    section: data_minimization
+    description: 请求字段必须至少属于一个请求数据类型的字段白名单
+    check:
+      type: fields_within
+      per_type:
+        diagnosis_summary: [patient_name, visit_date, diagnosis_code, diagnosis_summary, attending_dept]
+        cost_detail: [patient_name, item_name, item_date, amount, currency, charge_code]
+        claim_certificate: [patient_name, diagnosis_code, certificate_no, issue_date, certificate_summary]
+    outcome_on_fail: deny
+    risk: high
+    reason: 请求字段超出最小化白名单，禁止交付
+    clause_ref: clauses/data-minimization.md#CLS-MIN-001
+    source: 业务假设 B4：按类型的字段白名单
+  # ---------- 目的地与接收方 ----------
+  - rule_id: DST-001
+    name: 交付目的地连接器白名单
+    section: destination
+    description: 数据仅可交付至登记在册的香港跨境空间连接器
+    check: {type: allowlist, path: destination.connector_id, values: [hk-crossborder-connector-1]}
+    outcome_on_fail: deny
+    risk: high
+    reason: 交付目的地连接器不在白名单内，禁止交付
+    clause_ref: clauses/destination.md#CLS-DST-001
+    source: 业务假设 B5：目的地连接器白名单
+  - rule_id: DST-002
+    name: 交付区域限制
+    section: destination
+    description: 数据仅可交付至香港区域
+    check: {type: allowlist, path: destination.region, values: [hk]}
+    outcome_on_fail: deny
+    risk: high
+    reason: 交付目的地不在香港区域，禁止交付
+    clause_ref: clauses/destination.md#CLS-DST-001
+    source: 法律假设 L3：数据出境目的地限制
+  - rule_id: RCP-001
+    name: 接收方白名单
+    section: destination
+    description: 最终接收方须在白名单内
+    check: {type: allowlist, path: recipient, values: [hk-insurance-co-a]}
+    outcome_on_fail: deny
+    risk: high
+    reason: 接收方不在白名单内，禁止交付
+    clause_ref: clauses/destination.md#CLS-DST-001
+    source: 业务假设 B6：接收方白名单
+  # ---------- 期限 ----------
+  - rule_id: RET-001
+    name: 保存期限上限
+    section: retention
+    description: 接收方保存期限不得超过 180 天
+    check: {type: lte, path: retention_days, max: 180}
+    outcome_on_fail: deny
+    risk: medium
+    reason: 保存期限超过上限 180 天，禁止交付
+    clause_ref: clauses/retention.md#CLS-RET-001
+    source: 法律假设 L4 + 业务假设 B8：保存期限上限
+  - rule_id: VAL-001
+    name: 订阅有效期范围
+    section: retention
+    description: 订阅有效期须在提交日后 0 至 90 天内
+    check:
+      type: date_within
+      path: requested_until
+      anchor: submitted_at
+      min_days: 0
+      max_days: 90
+    outcome_on_fail: deny
+    risk: medium
+    reason: 订阅有效期超出允许范围（提交日后 0-90 天），禁止交付
+    clause_ref: clauses/retention.md#CLS-RET-001
+    source: 业务假设 B7：订阅有效期上限
+  # ---------- 证据要求 ----------
+  - rule_id: EVI-001
+    name: 患者授权同意记录
+    section: evidence
+    description: 订阅诊断类数据须附患者授权同意记录（缺失可补交，转人工审批）
+    check:
+      type: evidence_present
+      evidence_types: [consent_record]
+      when: {path: data_types, contains: diagnosis_summary}
+    missing_outcome: manual_review
+    evidence_required: [consent_record]
+    risk: medium
+    reason: 缺少患者授权同意记录，信息不足，需人工审批
+    clause_ref: clauses/data-minimization.md#CLS-MIN-001
+    source: 法律假设 L2：敏感就诊数据需患者授权
+  - rule_id: EVI-002
+    name: 理赔订单号
+    section: evidence
+    description: 订阅费用明细须附理赔订单号（缺失可补交，转人工审批）
+    check:
+      type: evidence_present
+      evidence_types: [insurance_order]
+      when: {path: data_types, contains: cost_detail}
+    missing_outcome: manual_review
+    evidence_required: [insurance_order]
+    risk: medium
+    reason: 缺少理赔订单号，信息不足，需人工审批
+    clause_ref: clauses/data-minimization.md#CLS-MIN-001
+    source: 业务假设 B9：费用明细需关联理赔订单
+  # ---------- 风险组合 ----------
+  - rule_id: RSK-001
+    name: 诊断数据长期保留风险
+    section: risk
+    description: 诊断类数据保存期限超过 30 天属高风险组合，需人工复核
+    check:
+      type: condition
+      all_of:
+        - {path: data_types, op: contains, value: diagnosis_summary}
+        - {path: retention_days, op: gt, value: 30}
+    outcome_on_fail: manual_review
+    risk: high
+    reason: 诊断类数据保留期超过 30 天，风险较高，需人工复核
+    clause_ref: clauses/retention.md#CLS-RET-001
+    source: 业务假设 B8：高风险组合规则

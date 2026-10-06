@@ -1,0 +1,50 @@
+{
+  "application_id": "APP-DEMO-ALLOW-001",
+  "applicant": {
+    "role": "hk_insurer",
+    "organization_id": "hk-ins-0001",
+    "region": "hk"
+  },
+  "purpose": "claim",
+  "purpose_description": "香港居民在内地医院就医后的理赔申请，需就诊摘要、费用明细与理赔证明",
+  "data_types": [
+    "diagnosis_summary",
+    "cost_detail",
+    "claim_certificate"
+  ],
+  "data_fields": [
+    "patient_name",
+    "visit_date",
+    "diagnosis_code",
+    "diagnosis_summary",
+    "attending_dept",
+    "item_name",
+    "item_date",
+    "amount",
+    "currency",
+    "certificate_no",
+    "issue_date"
+  ],
+  "destination": {
+    "connector_id": "hk-crossborder-connector-1",
+    "region": "hk"
+  },
+  "recipient": "hk-insurance-co-a",
+  "retention_days": 30,
+  "requested_until": "2026-12-01",
+  "submitted_at": "2026-10-06T09:00:00+08:00",
+  "evidence": [
+    {
+      "type": "identity_cert",
+      "reference": "REG-HK-2026-0001"
+    },
+    {
+      "type": "consent_record",
+      "reference": "CONSENT-2026-0921"
+    },
+    {
+      "type": "insurance_order",
+      "reference": "CLAIM-ORDER-2026-0042"
+    }
+  ]
+}

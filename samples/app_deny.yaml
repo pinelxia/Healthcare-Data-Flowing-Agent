@@ -1,0 +1,17 @@
+# 演示样例：预期判定 deny（多重违规：用途营销 + 越界字段 + 保存期限超限）
+application_id: APP-DEMO-DENY-001
+applicant: {role: hk_insurer, organization_id: hk-ins-0001, region: hk}
+purpose: marketing
+purpose_description: 市场分析用途（不在允许用途列表内）
+data_types: [diagnosis_summary]
+data_fields:
+  - patient_name
+  - raw_medical_record   # 原始病历：超出任何白名单
+destination: {connector_id: hk-crossborder-connector-1, region: hk}
+recipient: hk-insurance-co-a
+retention_days: 400      # 超过 180 天上限
+requested_until: 2026-12-01
+submitted_at: 2026-10-06T09:00:00+08:00
+evidence:
+  - {type: identity_cert, reference: REG-HK-2026-0001}
+  - {type: consent_record, reference: CONSENT-2026-0921}

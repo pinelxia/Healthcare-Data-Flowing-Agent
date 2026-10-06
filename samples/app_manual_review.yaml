@@ -1,0 +1,24 @@
+# 演示样例：预期判定 manual_review（信息不足：缺患者授权同意记录）
+application_id: APP-DEMO-MANUAL-001
+applicant: {role: hk_insurer, organization_id: hk-ins-0001, region: hk}
+purpose: claim
+purpose_description: 理赔申请，需就诊摘要与费用明细
+data_types: [diagnosis_summary, cost_detail]
+data_fields:
+  - patient_name
+  - visit_date
+  - diagnosis_code
+  - diagnosis_summary
+  - item_name
+  - item_date
+  - amount
+  - currency
+destination: {connector_id: hk-crossborder-connector-1, region: hk}
+recipient: hk-insurance-co-a
+retention_days: 30
+requested_until: 2026-12-01
+submitted_at: 2026-10-06T09:00:00+08:00
+evidence:
+  - {type: identity_cert, reference: REG-HK-2026-0001}
+  - {type: insurance_order, reference: CLAIM-ORDER-2026-0042}
+  # 注意：缺少 consent_record（诊断类数据必需的患者授权记录）→ 信息不足，转人工审批
