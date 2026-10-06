@@ -96,6 +96,30 @@ def test_assess_rejects_missing_required_field_with_envelope(client):
     assert response.json()["success"] is False
 
 
+def test_docs_uses_local_swagger_assets_not_cdn(client):
+    response = client.get("/docs")
+
+    assert response.status_code == 200
+    html = response.text
+    assert "/static/swagger-ui-bundle.js" in html
+    assert "/static/swagger-ui.css" in html
+    assert "/static/favicon.png" in html
+    assert "cdn.jsdelivr.net" not in html
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_static_swagger_assets_are_served(client):
+    bundle = client.get("/static/swagger-ui-bundle.js")
+    css = client.get("/static/swagger-ui.css")
+    favicon = client.get("/static/favicon.png")
+
+    assert bundle.status_code == 200
+    assert "javascript" in bundle.headers["content-type"]
+    assert css.status_code == 200
+    assert "css" in css.headers["content-type"]
+    assert favicon.status_code == 200
+
+
 def test_assess_unknown_policy_version_returns_404_envelope(client):
     payload = ALLOW_APP.model_dump(mode="json")
     payload["policy_version"] = "0.0.1"
